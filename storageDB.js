@@ -10,58 +10,106 @@ var StorageDB = function(namespace, opt) {
 	opt = opt || {};
 	var nsPrefix = opt.nsPrefix || 'storagedb.';
 	this.namespace = nsPrefix + namespace;
-	this.limit = opt.limit || 100;
-	this.list = [];
+	this.pk = opt.pk || 'id';
+	this.datas = {};
 
 	try {
-		this.list = JSON.parse(storage[this.namespace]) || [];
+		this.datas = JSON.parse(storage[this.namespace]) || {};
 	}
 	catch (e) {}
 }
 
 StorageDB.prototype = {
-	add: function(item) {
+	_updateStorage: function() {
 		var self = this;
 
-		item.createdAt = (new Date).getTime();
-		self.remove(item.id);
-		self.list.unshift(item);
-		if (self.list.length > self.limit) {
-			self.list.pop();
+		storage[self.namespace] = JSON.stringify(self.datas);
+	},
+	_each: function(callback) {
+		var self = this;
+
+		for (i in self.datas) {
+			if (self.datas.hasOwnProperty(i)) {
+				callback(self.datas[i], i);
+			}
 		}
-		self.updateStorage();
 	},
-	remove: function(id) {
+	count: function() {
 		var self = this;
 
-		self.list.forEach(function(item, i) {
-			if (item.id === id) {
-				self.list.splice(i, 1);
+		var count = 0;
+		self._each(function() {
+			count++;
+		});
+
+		return count;
+	},
+	insert: function(items) {
+		var self = this;
+
+		if (!Array.isArray(items)) {
+			items = [items];
+		}
+
+		items.forEach(function(item) {
+			var pkValue = item[ self.pk ];
+			if (!self.exist(pkValue)) {
+				self.datas[pkValue] = item;
+				self._updateStorage();
 			}
 		});
-		self.updateStorage();
 	},
-	find: function(id) {
+	remove: function(pkValue) {
 		var self = this;
 
-		var _item;
-		var exist = self.list.some(function(item) {
-			if (item.id === id) {
-				_item = item;
-				return true;
+		if (self.exist(pkValue)) {
+			delete self.datas[ pkValue ];
+			self._updateStorage();
+		}
+	},
+	find: function(pkValue) {
+		var self = this;
+
+		return self.datas[pkValue];
+	},
+	exist: function(pkValue) {
+		var self = this;
+
+		return !!self.find(pkValue);
+	},
+	search: function(cond, sort) {
+		var self = this;
+
+		var ret = [];
+		if (cond) {
+			self._each(function() {
+				var item = self.datas[i];
+				for (key in cond) {
+					var val = cond[key];
+					var _val = item[key];
+					if ( val === _val || (typeof val === 'function' && 'test' in val && val.test(_val)) ) {
+						ret.push(item);
+					}
+				}
+			});
+		}
+
+		if (sort) {
+			for (key in sort) {
+				var sortFn = sort[key] === 'desc'
+					? function(a, b) { return a[key] < b[key] }
+					: function(a, b) { return a[key] > b[key] };
+
+				ret.sort(sortFn);
 			}
-		});
-		return exist ? _item : undefined;
+		}
+
+		return ret;
 	},
-	exist: function(id) {
+	destroy: function() {
 		var self = this;
 
-		return !!self.find(id);
-	},
-	updateStorage: function() {
-		var self = this;
-
-		storage[self.namespace] = JSON.stringify(self.list);
+		delete storage[self.namespace];
 	}
 };
 
