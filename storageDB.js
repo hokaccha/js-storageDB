@@ -1,9 +1,9 @@
-(function($, undefined) {
+(function() {
 
 var storage = window.localStorage;
 
 var StorageDB = function(namespace, opt) {
-	if (!namespace || $.type(namespace) !== 'string') {
+	if (!namespace || typeof namespace !== 'string') {
 		throw new Error('namespace is must be string');
 	}
 
@@ -67,5 +67,5 @@ StorageDB.prototype = {
 
 window.StorageDB = StorageDB;
 
-})(jQuery);
+})();
 
