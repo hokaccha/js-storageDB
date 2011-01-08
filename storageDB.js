@@ -81,9 +81,9 @@ StorageDB.prototype = {
 		var self = this;
 
 		var ret = [];
-		if (cond) {
-			self._each(function() {
-				var item = self.datas[i];
+		self._each(function() {
+			var item = self.datas[i];
+			if (cond) {
 				for (key in cond) {
 					var val = cond[key];
 					var _val = item[key];
@@ -91,8 +91,11 @@ StorageDB.prototype = {
 						ret.push(item);
 					}
 				}
-			});
-		}
+			}
+			else {
+				ret.push(item);
+			}
+		});
 
 		if (sort) {
 			for (key in sort) {
